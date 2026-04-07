@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Livro de Telefonistas | 6° BBM</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+:root{
+  --red:#c0392b;--red-dk:#96281b;--red-lt:#e74c3c;
+  --gold:#f39c12;--gold-lt:#f1c40f;
+  --dark:#1a1a2e;--darker:#0f0f1a;
+  --s1:#16213e;--s2:#1e2d4a;--s3:#243356;
+  --txt:#ecf0f1;--muted:#95a5a6;
+  --bdr:rgba(255,255,255,0.08);--bdr-r:rgba(192,57,43,0.4);
+  --grn:#27ae60;--r:8px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:var(--darker);color:var(--txt);min-height:100vh}
+
+/* LOCK */
+.lock{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+  background:radial-gradient(ellipse at 50% 0%,rgba(192,57,43,.18) 0%,transparent 60%),var(--darker)}
+.lcard{background:var(--s1);border:1px solid var(--bdr);border-radius:16px;padding:36px;max-width:420px;width:100%;text-align:center}
+.lemb{width:80px;height:80px;border-radius:50%;border:3px solid var(--red);margin:0 auto 16px;
+  background:var(--s2);display:flex;align-items:center;justify-content:center;
+  font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--gold);line-height:1.2}
+.ltitle{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:2px}
+.lsub{font-size:12px;color:var(--muted);margin-bottom:24px;line-height:1.6}
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.rbtn{padding:11px 8px;border-radius:var(--r);border:1px solid var(--bdr);background:var(--s2);color:var(--txt);
+  cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.5px;transition:all .2s}
+.rbtn:hover,.rbtn.sel{background:var(--red);border-color:var(--red);color:#fff}
+.rbtn.cap{grid-column:span 2;background:rgba(243,156,18,.1);border-color:rgba(243,156,18,.3);color:var(--gold)}
+.rbtn.cap:hover,.rbtn.cap.sel{background:var(--gold);color:var(--darker)}
+.pwrap{display:none}
+.plabel{font-size:12px;color:var(--muted);margin-bottom:12px}
+.prow{display:flex;gap:8px;justify-content:center;margin-bottom:16px}
+.pd{width:52px;height:60px;border-radius:var(--r);border:1px solid var(--bdr);background:var(--s2);
+  color:var(--txt);font-family:'Rajdhani',sans-serif;font-size:30px;font-weight:700;
+  text-align:center;outline:none;transition:border-color .2s;-moz-appearance:textfield}
+.pd::-webkit-inner-spin-button,.pd::-webkit-outer-spin-button{-webkit-appearance:none}
+.pd:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(192,57,43,.2)}
+.perr{display:none;background:rgba(192,57,43,.1);border:1px solid var(--bdr-r);color:var(--red-lt);
+  padding:8px 12px;border-radius:var(--r);font-size:12px;margin-bottom:10px}
+
+/* HDR */
+.hdr{background:linear-gradient(135deg,var(--darker),var(--s1));border-bottom:2px solid var(--red);
+  position:sticky;top:0;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.hdr-in{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:10px 24px}
+.hlogo{width:48px;height:48px;border-radius:50%;border:2px solid var(--red);background:var(--s2);
+  display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;
+  font-size:11px;font-weight:700;color:var(--gold);line-height:1.1;flex-shrink:0}
+.htitle h1{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:var(--gold);
+  letter-spacing:1px;text-transform:uppercase}
+.htitle p{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px}
+.hr{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sdot{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:#2ecc71;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* MAIN */
+.main{max-width:1280px;margin:0 auto;padding:20px 24px}
+
+/* TABS */
+.tabs{display:flex;gap:4px;background:var(--darker);padding:4px;border-radius:var(--r);margin-bottom:20px;overflow-x:auto}
+.tab{padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-family:'Rajdhani',sans-serif;
+  font-size:12px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);
+  background:transparent;transition:all .2s;white-space:nowrap}
+.tab.active{background:var(--s2);color:var(--txt);border:1px solid var(--bdr)}
+.tpane{display:none}.tpane.active{display:block}
+
+/* CAL */
+.cal{background:var(--s1);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.clabel{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;color:var(--muted);
+  text-transform:uppercase;letter-spacing:1px}
+.cnav{display:flex;align-items:center;gap:8px}
+.cnb{background:var(--s2);border:1px solid var(--bdr);color:var(--txt);width:30px;height:30px;
+  border-radius:var(--r);cursor:pointer;font-size:16px;display:flex;align-items:center;
+  justify-content:center;transition:all .2s}
+.cnb:hover{background:var(--red);border-color:var(--red)}
+.cdate{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;color:var(--gold);
+  min-width:180px;text-align:center}
+.sinfo{margin-left:auto;background:rgba(192,57,43,.1);border:1px solid var(--bdr-r);
+  border-radius:var(--r);padding:5px 12px;font-size:11px;color:var(--muted)}
+.sinfo strong{color:var(--txt)}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+@media(max-width:640px){.stats{grid-template-columns:1fr}}
+.sc{background:var(--s1);border:1px solid var(--bdr);border-radius:var(--r);padding:14px 18px}
+.sc .sl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.sc .sv{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700}
+.sv.gold{color:var(--gold)}.sv.green{color:#2ecc71}.sv.muted{color:var(--muted);font-size:13px}
+
+/* SEC */
+.sec{background:var(--s1);border:1px solid var(--bdr);border-radius:var(--r);margin-bottom:16px;overflow:hidden}
+.shdr{padding:12px 18px;border-bottom:1px solid var(--bdr);background:var(--s2);
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.stitle{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px}
+.bdg{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.br{background:rgba(192,57,43,.2);color:var(--red-lt);border:1px solid var(--bdr-r)}
+.bo{background:rgba(243,156,18,.15);color:var(--gold);border:1px solid rgba(243,156,18,.3)}
+.bg{background:rgba(39,174,96,.15);color:#2ecc71;border:1px solid rgba(39,174,96,.3)}
+.bi{background:rgba(52,152,219,.15);color:#3498db;border:1px solid rgba(52,152,219,.3)}
+.sbody{padding:18px}
+
+/* FORM */
+.fr{display:grid;gap:12px;margin-bottom:12px}
+.fr2{grid-template-columns:1fr 1fr}.fr3{grid-template-columns:1fr 1fr 1fr}.fr1{grid-template-columns:1fr}
+@media(max-width:600px){.fr2,.fr3{grid-template-columns:1fr}}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fl{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.rm{color:var(--red-lt)}
+.fi,.fs,.ft{background:var(--s3);border:1px solid var(--bdr);border-radius:var(--r);color:var(--txt);
+  padding:9px 12px;font-size:13px;font-family:'Inter',sans-serif;transition:border-color .2s;outline:none;width:100%}
+.fi:focus,.fs:focus,.ft:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(192,57,43,.12)}
+.ft{resize:vertical;min-height:88px}
+.fs option{background:var(--s2)}
+.fi:disabled,.fs:disabled,.ft:disabled{opacity:.55;cursor:default}
+
+/* BTN */
+.btn{padding:9px 18px;border-radius:var(--r);border:none;cursor:pointer;font-family:'Rajdhani',sans-serif;
+  font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;transition:all .2s;
+  display:inline-flex;align-items:center;gap:5px}
+.bp{background:var(--red);color:#fff}.bp:hover{background:var(--red-dk);transform:translateY(-1px)}
+.bs{background:var(--s3);color:var(--txt);border:1px solid var(--bdr)}.bs:hover{background:var(--s2)}
+.bg2{background:var(--grn);color:#fff}.bg2:hover{background:#229954}
+.bd{background:var(--gold);color:var(--darker)}.bd:hover{background:var(--gold-lt)}
+.bsm{padding:5px 12px;font-size:11px}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+.brow{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+
+/* OCC */
+.ocard{background:var(--s2);border:1px solid var(--bdr);border-radius:var(--r);margin-bottom:12px;overflow:hidden}
+.ohdr{padding:9px 14px;background:rgba(192,57,43,.08);border-bottom:1px solid var(--bdr);
+  display:flex;align-items:center;justify-content:space-between}
+.onum{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;color:var(--red-lt);
+  text-transform:uppercase;letter-spacing:1px}
+.obody{padding:14px}
+.addocc{width:100%;border:2px dashed var(--bdr);background:transparent;color:var(--muted);padding:12px;
+  border-radius:var(--r);cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;
+  letter-spacing:.5px;text-transform:uppercase;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px}
+.addocc:hover{border-color:var(--red);color:var(--red-lt);background:rgba(192,57,43,.05)}
+
+/* ALERT */
+.al{padding:10px 14px;border-radius:var(--r);font-size:12px;margin-bottom:12px;
+  display:flex;align-items:flex-start;gap:7px;line-height:1.5}
+.aw{background:rgba(243,156,18,.1);border:1px solid rgba(243,156,18,.3);color:var(--gold)}
+.ag{background:rgba(39,174,96,.1);border:1px solid rgba(39,174,96,.3);color:#2ecc71}
+.ae{background:rgba(192,57,43,.1);border:1px solid var(--bdr-r);color:var(--red-lt)}
+.ai{background:rgba(52,152,219,.1);border:1px solid rgba(52,152,219,.3);color:#3498db}
+
+/* VISTO */
+.vbox{background:var(--s2);border:2px solid var(--gold);border-radius:var(--r);padding:14px 18px;margin-top:12px}
+.vtitle{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--gold);
+  text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+
+/* MODAL */
+.mov{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:1000;
+  display:none;align-items:center;justify-content:center;padding:20px}
+.mov.open{display:flex}
+.modal{background:var(--s1);border:1px solid var(--bdr);border-radius:12px;padding:26px;
+  max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.mtitle{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;color:var(--gold);
+  text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.msub{font-size:12px;color:var(--muted);margin-bottom:18px}
+.mfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+
+/* TOAST */
+.tc{position:fixed;bottom:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:8px;max-width:320px}
+.toast{background:var(--s1);border:1px solid var(--bdr);border-radius:var(--r);padding:11px 14px;
+  font-size:12px;box-shadow:0 4px 20px rgba(0,0,0,.4);animation:tin .3s ease;border-left:3px solid var(--grn)}
+.toast.err{border-left-color:var(--red-lt)}.toast.warn{border-left-color:var(--gold)}
+@keyframes tin{from{transform:translateX(80px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{text-align:left;padding:9px 12px;background:var(--s2);color:var(--muted);
+  font-size:10px;text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--bdr)}
+.tbl td{padding:9px 12px;border-bottom:1px solid var(--bdr);vertical-align:top}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(255,255,255,.02)}
+
+/* PINS */
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:480px){.pgrid{grid-template-columns:1fr}}
+.pcard{background:var(--s2);border:1px solid var(--bdr);border-radius:var(--r);padding:14px 16px}
+.pcard .pn{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.pcard .pc{font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;color:var(--gold);letter-spacing:3px}
+.pcard.cap{border-color:rgba(243,156,18,.4);background:rgba(243,156,18,.05);grid-column:span 2}
+@media(max-width:480px){.pcard.cap{grid-column:span 1}}
+
+.sep{border:none;border-top:1px solid var(--bdr);margin:14px 0}
+</style>
+</head>
+<body>
+
+<!-- ═══ LOCK SCREEN ═══ -->
+<div id="LS" class="lock">
+  <div class="lcard">
+    <div class="lemb">6°<br>BBM</div>
+    <div class="ltitle">6° BBM</div>
+    <p class="lsub">Corpo de Bombeiros Militar do Maranhão<br>Sistema Digital — Livro de Telefonistas</p>
+    <div id="RG" class="rgrid">
+      <button class="rbtn" onclick="selRole('BC Felipe')">BC Felipe</button>
+      <button class="rbtn" onclick="selRole('BC Lucas')">BC Lucas</button>
+      <button class="rbtn" onclick="selRole('BC Rodrigo')">BC Rodrigo</button>
+      <button class="rbtn" onclick="selRole('BC Maycon')">BC Maycon</button>
+      <button class="rbtn cap" onclick="selRole('Cap. Jorge Luis')">Cap. Jorge Luis — SubCmt</button>
+    </div>
+    <div id="PW" class="pwrap">
+      <p class="plabel">PIN de acesso — <strong id="RL" style="color:var(--gold)"></strong></p>
+      <div id="PE" class="perr">PIN incorreto. Tente novamente.</div>
+      <div class="prow">
+        <input class="pd" type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" id="d0" oninput="nxt(0)" onkeydown="bk(event,0)">
+        <input class="pd" type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" id="d1" oninput="nxt(1)" onkeydown="bk(event,1)">
+        <input class="pd" type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" id="d2" oninput="nxt(2)" onkeydown="bk(event,2)">
+        <input class="pd" type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" id="d3" oninput="nxt(3)" onkeydown="bk(event,3)">
+      </div>
+      <button class="btn bp" style="width:100%;justify-content:center" onclick="doLogin()">Entrar</button>
+      <button class="btn bs" style="width:100%;justify-content:center;margin-top:8px" onclick="backR()">← Voltar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="APP" style="display:none">
+<header class="hdr">
+  <div class="hdr-in">
+    <div class="hlogo">6°<br>BBM</div>
+    <div class="htitle">
+      <h1>Livro de Telefonistas</h1>
+      <p>6° Batalhão de Bombeiros Militar — Maranhão</p>
+    </div>
+    <div class="hr">
+      <span id="UL" style="font-size:12px;color:var(--gold);font-family:'Rajdhani',sans-serif;font-weight:600"></span>
+      <div class="sdot"><span class="dot"></span><span>Online</span></div>
+      <button class="btn bs bsm" onclick="logout()">Sair</button>
+    </div>
+  </div>
+</header>
+<div class="main">
+
+<div class="tabs">
+  <button class="tab active" onclick="openTab('TL',this)">📋 Livro do Dia</button>
+  <button class="tab" onclick="openTab('TH',this)">📂 Histórico</button>
+  <button class="tab" onclick="openTab('TP',this)">🔑 PINs</button>
+</div>
+
+<!-- TAB LIVRO -->
+<div id="TL" class="tpane active">
+
+  <div class="cal">
+    <span class="clabel">📅 Serviço</span>
+    <div class="cnav">
+      <button class="cnb" onclick="navD(-1)">‹</button>
+      <div class="cdate" id="CDT">—</div>
+      <button class="cnb" onclick="navD(1)">›</button>
+    </div>
+    <div class="sinfo">Período: <strong id="SP">—</strong></div>
+    <button class="btn bs bsm" style="margin-left:auto" onclick="goToday()">Hoje</button>
+  </div>
+
+  <div class="stats">
+    <div class="sc"><div class="sl">Telefonista</div><div class="sv gold" id="sST">—</div></div>
+    <div class="sc"><div class="sl">Ocorrências</div><div class="sv" id="sOC">0</div></div>
+    <div class="sc"><div class="sl">Status</div><div class="sv muted" id="sSTt">—</div></div>
+  </div>
+
+  <div id="AB"></div>
+
+  <!-- I ESCALA -->
+  <div class="sec">
+    <div class="shdr"><span class="stitle">I — Escala de Serviço</span><span class="bdg br">Obrigatório</span></div>
+    <div class="sbody">
+      <div class="fr fr3">
+        <div class="fg">
+          <label class="fl">Telefonista Escalado <span class="rm">*</span></label>
+          <select class="fs" id="fT">
+            <option value="">Selecionar...</option>
+            <option>BC Felipe</option><option>BC Lucas</option>
+            <option>BC Rodrigo</option><option>BC Maycon</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">Permuta</label>
+          <select class="fs" id="fP">
+            <option value="">Nenhuma</option>
+            <option>BC Felipe</option><option>BC Lucas</option>
+            <option>BC Rodrigo</option><option>BC Maycon</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">Data do Serviço</label>
+          <input class="fi" id="fDS" readonly>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- II OCC -->
+  <div class="sec">
+    <div class="shdr">
+      <span class="stitle">II — Ocorrências</span>
+      <span class="bdg bi" id="OB">0 registros</span>
+      <span class="bdg br" style="margin-left:4px">Campos obrigatórios</span>
+    </div>
+    <div class="sbody">
+      <div id="OL"></div>
+      <button class="addocc" id="BAO" onclick="addOcc()">＋ Adicionar Ocorrência</button>
+    </div>
+  </div>
+
+  <!-- III SINESP -->
+  <div class="sec">
+    <div class="shdr"><span class="stitle">III — SINESP CAD</span><span class="bdg bo">Opcional</span></div>
+    <div class="sbody">
+      <div class="fr fr2">
+        <div class="fg">
+          <label class="fl">Número SINESP CAD</label>
+          <input class="fi" id="fSI" placeholder="Ex: SINBM2025MA060000000001" maxlength="40" style="font-family:monospace;letter-spacing:1px">
+        </div>
+        <div class="fg">
+          <label class="fl">Município Principal</label>
+          <select class="fs" id="fMU">
+            <option value="">Selecionar...</option>
+            <option>Altamira do Maranhão</option><option>Alto Alegre do Maranhão</option>
+            <option>Bacabal</option><option>Bom Lugar</option><option>Brejo de Areia</option>
+            <option>Conceição do Lago-Açu</option><option>Lago da Pedra</option>
+            <option>Lago Verde</option><option>Lagoa Grande do Maranhão</option>
+            <option>Marajá do Sena</option><option>Olho d'Água das Cunhãs</option>
+            <option>Paulo Ramos</option><option>São Luís Gonzaga do Maranhão</option>
+            <option>São Mateus do Maranhão</option><option>Vitorino Freire</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AÇÕES -->
+  <div class="sec">
+    <div class="shdr"><span class="stitle">Ações do Livro</span><span class="bdg" id="livroStatusBdg" style="margin-left:4px"></span></div>
+    <div class="sbody">
+      <div id="AB2" class="brow">
+        <button class="btn bs" onclick="saveDraft()">💾 Salvar Rascunho</button>
+        <button class="btn bg2" onclick="finalizarLivro()">✅ Finalizar Livro</button>
+      </div>
+      <div id="editBox" style="display:none" class="brow">
+        <button class="btn bp" onclick="reabrirLivro()">✏️ Editar Livro</button>
+        <span style="font-size:11px;color:var(--muted);align-self:center">O livro será reaberto para edição. Será necessário finalizar novamente.</span>
+      </div>
+      <div id="FI"></div>
+      <div id="VB" style="display:none" class="vbox">
+        <div class="vtitle">🪖 Visto do SubComandante</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Cap. Jorge Luis — confirme seu PIN para registrar o visto.</p>
+        <div class="fr fr2">
+          <div class="fg"><label class="fl">Data do Visto</label><input class="fi" id="VD" readonly></div>
+          <div class="fg"><label class="fl">PIN do Capitão <span class="rm">*</span></label>
+            <input class="fi" type="password" id="VP" maxlength="4" placeholder="••••"></div>
+        </div>
+        <button class="btn bd" id="btnVisto" onclick="darVisto()">🖊 Confirmar Visto</button>
+        <div id="VO" style="display:none;margin-top:10px" class="al ag">✅ Visto registrado pelo Cap. Jorge Luis.</div>
+        <div id="pdfBox" style="display:none;margin-top:12px">
+          <button class="btn bp" onclick="gerarPDF()">📄 Gerar PDF do Livro</button>
+          <span style="font-size:11px;color:var(--muted);margin-left:10px">Exportar livro completo com visto</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /TL -->
+
+<!-- TAB HIST -->
+<div id="TH" class="tpane">
+  <div class="sec">
+    <div class="shdr"><span class="stitle">Histórico de Livros</span></div>
+    <div class="sbody" id="HB"><div class="al ai">Carregando...</div></div>
+  </div>
+</div>
+
+<!-- TAB PINS -->
+<div id="TP" class="tpane">
+  <div class="sec">
+    <div class="shdr"><span class="stitle">PINs de Acesso</span><span class="bdg br">Confidencial</span></div>
+    <div class="sbody">
+      <div class="al aw">⚠️ Guarde estes PINs com segurança. Não compartilhe com terceiros.</div>
+      <div class="pgrid">
+        <div class="pcard"><div class="pn">BC Felipe</div><div class="pc">3767</div></div>
+        <div class="pcard"><div class="pn">BC Lucas</div><div class="pc">3418</div></div>
+        <div class="pcard"><div class="pn">BC Rodrigo</div><div class="pc">5246</div></div>
+        <div class="pcard"><div class="pn">BC Maycon</div><div class="pc">0849</div></div>
+        <div class="pcard cap"><div class="pn">Cap. Jorge Luis — SubCmt (Visto)</div><div class="pc">3252</div></div>
+      </div>
+      <div class="sep"></div>
+      <p style="font-size:11px;color:var(--muted)">Para alterar PINs, contate o administrador do sistema.</p>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /APP -->
+
+<!-- MODAL FINALIZAR -->
+<div class="mov" id="MF">
+  <div class="modal">
+    <div class="mtitle">Finalizar Livro</div>
+    <p class="msub">Confirme seu PIN para finalizar o livro deste serviço.</p>
+    <div class="fr fr1"><div class="fg">
+      <label class="fl">Seu PIN <span class="rm">*</span></label>
+      <input class="fi" type="password" id="FP" maxlength="4" placeholder="••••">
+    </div></div>
+    <div id="FE" class="perr"></div>
+    <div class="mfoot">
+      <button class="btn bs" onclick="closeMod('MF')">Cancelar</button>
+      <button class="btn bg2" onclick="confFin()">✅ Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="tc" id="TC"></div>
+
+<script>
+// ═══ FIREBASE — substitua com suas credenciais ═══
+const FBC = {
+  apiKey:"AIzaSyBYyRDGBYzCBQR9j9-vLBmWm32A50dsNXg",
+  authDomain:"bbm6-livro.firebaseapp.com",
+  projectId:"bbm6-livro",
+  storageBucket:"bbm6-livro.firebasestorage.app",
+  messagingSenderId:"212369776006",
+  appId:"1:212369776006:web:5d7d3624570cae6ca16007"
+};
+try{ firebase.initializeApp(FBC); } catch(e){}
+let db;
+try{ db = firebase.firestore(); } catch(e){ db=null; }
+
+// ═══ CONSTANTES ═══
+const PINS={'BC Felipe':'3767','BC Lucas':'3418','BC Rodrigo':'5246','BC Maycon':'0849','Cap. Jorge Luis':'3252'};
+const WA_CAP='+5598982787865', WA_QTL='+5599982489658';
+// IMPORTANTE: Cada número deve se cadastrar em callmebot.com e obter sua apikey
+// https://www.callmebot.com/blog/free-api-whatsapp-messages/
+const WA_KEY_CAP='APIKEY_CAPITAO'; // substituir após cadastro
+const WA_KEY_QTL='APIKEY_QUARTEL'; // substituir após cadastro
+
+const TIPOS_OCC=[
+  'Incêndio em Residência','Incêndio em Estabelecimento Comercial',
+  'Incêndio em Indústria','Incêndio em Vegetação / Queimada',
+  'Incêndio em Veículo','Incêndio em Depósito / Armazém',
+  'Incêndio com Vítima','Explosão com Incêndio',
+  'Acidente Veicular com Vítima','Acidente Veicular sem Vítima',
+  'Atropelamento','Capotamento / Tombamento de Veículo',
+  'Acidente com Motocicleta','Acidente com Veículo Pesado',
+  'Colisão Frontal','Resgate em Via Pública',
+  'Resgate em Altura / Rapel','Resgate em Área de Difícil Acesso',
+  'Resgate Aquático / Afogamento','Salvamento em Colapso Estrutural',
+  'Atendimento Pré-Hospitalar (APH)','Atendimento a Paciente Psiquiátrico',
+  'Parada Cardiorrespiratória (PCR)','Parto de Emergência / Gestante',
+  'Intoxicação / Envenenamento','Queimadura',
+  'Choque Elétrico','Vítima de Agressão / Violência',
+  'Tentativa de Suicídio','Vazamento de Gás',
+  'Vazamento de Produto Químico (HAZMAT)','Derramamento de Combustível',
+  'Abelhas / Marimbondos / Enxame','Animal Peçonhento (Cobra/Escorpião/Aranha)',
+  'Animal Solto em Via Pública','Pessoa Presa / Encarcerada',
+  'Deslizamento / Soterramento','Enchente / Inundação',
+  'Desabamento / Colapso de Edificação','Busca e Salvamento (BUSCA)',
+  'Apoio a Órgãos de Segurança Pública','Apoio ao SAMU',
+  'Transferência de Paciente','Remoção de Obstáculo em Via',
+  'Verificação de Ocorrência','Prevenção em Evento (Stand-by)',
+  'Chamada Trote / Falsa Ocorrência','Orientação ao Solicitante',
+  'Outra Ocorrência'
+];
+const CIDADES=[
+  'Altamira do Maranhão','Alto Alegre do Maranhão','Bacabal','Bom Lugar',
+  'Brejo de Areia','Conceição do Lago-Açu','Lago da Pedra','Lago Verde',
+  'Lagoa Grande do Maranhão','Marajá do Sena',"Olho d'Água das Cunhãs",
+  'Paulo Ramos','São Luís Gonzaga do Maranhão','São Mateus do Maranhão','Vitorino Freire'
+];
+
+// ═══ STATE ═══
+let curUser=null, curDate=new Date(), livro=null, occs=[], alerts=[];
+
+// ═══ AUTH ═══
+let selR='';
+function selRole(r){
+  selR=r;
+  document.querySelectorAll('.rbtn').forEach(b=>b.classList.remove('sel'));
+  event.currentTarget.classList.add('sel');
+  g('RG').style.display='none';
+  g('PW').style.display='block';
+  g('RL').textContent=r;
+  g('PE').style.display='none';
+  ['d0','d1','d2','d3'].forEach(i=>{g(i).value='';});
+  setTimeout(()=>g('d0').focus(),80);
+}
+function backR(){g('RG').style.display='grid';g('PW').style.display='none';}
+function nxt(i){
+  let v=g('d'+i).value.replace(/[^0-9]/g,'');
+  if(v.length>1)v=v.slice(-1);
+  g('d'+i).value=v;
+  if(v&&i<3)g('d'+(i+1)).focus();
+  if(v&&i===3)doLogin();
+}
+function bk(e,i){if(e.key==='Backspace'&&!g('d'+i).value&&i>0)g('d'+(i-1)).focus();}
+function doLogin(){
+  const pin=['d0','d1','d2','d3'].map(i=>g(i).value.trim()).join('');
+  if(pin.length<4){toast('Digite os 4 dígitos','warn');return;}
+  if(PINS[selR]===pin){
+    curUser=selR;
+    g('LS').style.display='none';
+    g('APP').style.display='block';
+    g('UL').textContent=curUser;
+    initApp();
+  } else {
+    g('PE').style.display='block';
+    ['d0','d1','d2','d3'].forEach(i=>{g(i).value='';});
+    g('d0').focus();
+  }
+}
+function logout(){
+  curUser=null;livro=null;occs=[];clearAlerts();
+  g('APP').style.display='none';g('LS').style.display='flex';
+  backR();
+}
+
+// ═══ DATE ═══
+function dk(d){return d.toISOString().slice(0,10);}
+function fmtD(d){return d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});}
+function svcPeriod(d){
+  const s=new Date(d);s.setHours(7,0,0,0);
+  const e=new Date(d);e.setDate(e.getDate()+1);e.setHours(7,0,0,0);
+  const f=x=>x.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  return f(s)+' → '+f(e);
+}
+function navD(n){curDate.setDate(curDate.getDate()+n);loadDay();}
+function goToday(){curDate=new Date();loadDay();}
+
+// ═══ INIT ═══
+function initApp(){loadDay();loadHist();setPerms();}
+function setPerms(){
+  const cap=curUser==='Cap. Jorge Luis';
+  g('BAO').style.display=cap?'none':'flex';
+  g('AB2').style.display=cap?'none':'flex';
+}
+
+// ═══ LOAD DAY ═══
+async function loadDay(){
+  const key=dk(curDate);
+  g('CDT').textContent=fmtD(curDate);
+  g('SP').textContent=svcPeriod(curDate);
+  g('fDS').value=curDate.toLocaleDateString('pt-BR');
+  g('AB').innerHTML='';
+  // Tenta carregar do Firebase; se offline usa localStorage
+  try{
+    if(!db)throw new Error('no db');
+    const doc=await db.collection('livros').doc(key).get();
+    livro=doc.exists?doc.data():null;
+    if(livro) localStorage.setItem('livro_'+key, JSON.stringify(livro));
+  } catch(e){
+    const local=localStorage.getItem('livro_'+key);
+    livro=local?JSON.parse(local):null;
+  }
+  populateForm();checkAlerts2();
+}
+
+function populateForm(){
+  const d=livro||{};
+  occs=d.ocorrencias||[];
+  sv('fT',d.telefonista||'');sv('fP',d.permuta||'');
+  sv('fSI',d.sinesp||'');sv('fMU',d.municipio||'');
+  renderOccs();updateStats();renderFin();renderVisto();
+  const locked=d.finalizado||curUser==='Cap. Jorge Luis';
+  lockForm(locked);
+}
+function sv(id,v){const e=g(id);if(e)e.value=v;}
+function lockForm(l){
+  ['fT','fP','fSI','fMU'].forEach(id=>{const e=g(id);if(e)e.disabled=l;});
+  const isCap=curUser==='Cap. Jorge Luis';
+  g('BAO').style.display=(l||isCap)?'none':'flex';
+  g('AB2').style.display=(l||isCap)?'none':'flex';
+  document.querySelectorAll('.oi,.os,.ot').forEach(e=>e.disabled=l);
+  document.querySelectorAll('.odel').forEach(b=>b.style.display=l?'none':'inline-flex');
+}
+
+// ═══ OCCS ═══
+function addOcc(){
+  occs.push({tipo:'',solicitante:'',endereco:'',referencia:'',hora:'',tResp:'',tAtend:'',descricao:'',cidade:''});
+  renderOccs();updateStats();
+}
+function delOcc(i){occs.splice(i,1);renderOccs();updateStats();}
+function upOcc(i,f,v){if(occs[i])occs[i][f]=v;}
+function chgTipo(i,v){
+  if(!occs[i])return;
+  const inp=document.getElementById("outra_"+i);
+  if(v==="__outra__"){
+    occs[i]._outra=true;
+    occs[i].tipo=occs[i]._outraTexto||"Outra Ocorrência";
+    if(inp){inp.style.display="block";setTimeout(()=>inp.focus(),50);}
+  } else {
+    occs[i]._outra=false;occs[i]._outraTexto="";
+    occs[i].tipo=v;
+    if(inp){inp.style.display="none";inp.value="";}
+  }
+}
+
+function renderOccs(){
+  const locked=(livro&&livro.finalizado)||curUser==='Cap. Jorge Luis';
+  const d=locked?'disabled':'';
+  g('OL').innerHTML=occs.map((o,i)=>`
+    <div class="ocard">
+      <div class="ohdr">
+        <span class="onum">Ocorrência #${String(i+1).padStart(2,'0')}</span>
+        ${!locked?`<button class="btn bs bsm odel" onclick="delOcc(${i})">✕</button>`:''}
+      </div>
+      <div class="obody">
+        <div class="fr fr2">
+          <div class="fg"><label class="fl">Tipo de Ocorrência <span class="rm">*</span></label>
+            <select class="fs os" ${d} onchange="chgTipo(${i},this.value)">
+              <option value="">Selecionar...</option>
+              ${TIPOS_OCC.map(t=>`<option ${o.tipo===t&&t!=='Outra Ocorrência'?'selected':''}>${t}</option>`).join('')}
+              <option value="__outra__" ${o._outra?'selected':''}>Outra Ocorrência</option>
+            </select>
+            <input class="fi oi" id="outra_${i}" placeholder="Descreva o tipo de ocorrência..." ${d}
+              value="${esc(o._outraTexto||'')}"
+              style="margin-top:6px;display:${o._outra?'block':'none'}"
+              oninput="upOcc(${i},'_outraTexto',this.value);upOcc(${i},'tipo',this.value||'Outra Ocorrência')">
+          </div>
+          <div class="fg"><label class="fl">Solicitante / Meio <span class="rm">*</span></label>
+            <input class="fi oi" value="${esc(o.solicitante)}" placeholder="Nome ou telefone" ${d} onchange="upOcc(${i},'solicitante',this.value)">
+          </div>
+        </div>
+        <div class="fr fr2">
+          <div class="fg"><label class="fl">Endereço <span class="rm">*</span></label>
+            <input class="fi oi" value="${esc(o.endereco)}" placeholder="Rua, nº, bairro" ${d} onchange="upOcc(${i},'endereco',this.value)">
+          </div>
+          <div class="fg"><label class="fl">Município</label>
+            <select class="fs os" ${d} onchange="upOcc(${i},'cidade',this.value)">
+              <option value="">Selecionar...</option>
+              ${CIDADES.map(c=>`<option ${o.cidade===c?'selected':''}>${c}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="fr fr3">
+          <div class="fg"><label class="fl">Ponto de Referência</label>
+            <input class="fi oi" value="${esc(o.referencia)}" ${d} onchange="upOcc(${i},'referencia',this.value)">
+          </div>
+          <div class="fg"><label class="fl">Hora <span class="rm">*</span></label>
+            <input class="fi oi" type="time" value="${o.hora||''}" ${d} onchange="upOcc(${i},'hora',this.value)">
+          </div>
+          <div class="fg"><label class="fl">Tempo Resposta</label>
+            <input class="fi oi" value="${esc(o.tResp)}" placeholder="Ex: 08min" ${d} onchange="upOcc(${i},'tResp',this.value)">
+          </div>
+        </div>
+        <div class="fr fr2">
+          <div class="fg"><label class="fl">Tempo Atendimento</label>
+            <input class="fi oi" value="${esc(o.tAtend)}" placeholder="Ex: 45min" ${d} onchange="upOcc(${i},'tAtend',this.value)">
+          </div>
+          <div class="fg"><label class="fl">Nº SINESP CAD da Ocorrência</label>
+            <input class="fi oi" value="${esc(o.sinesp||'')}" placeholder="Código SINESP" ${d} style="font-family:monospace" onchange="upOcc(${i},'sinesp',this.value)">
+          </div>
+        </div>
+        <div class="fr fr1"><div class="fg"><label class="fl">Descrição da Ocorrência <span class="rm">*</span></label>
+          <textarea class="ft ot" ${d} onchange="upOcc(${i},'descricao',this.value)">${esc(o.descricao)}</textarea>
+        </div></div>
+      </div>
+    </div>`).join('');
+  g('OB').textContent=occs.length+' registro'+(occs.length!==1?'s':'');
+}
+function esc(s){return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+// ═══ STATS ═══
+function updateStats(){
+  const d=livro||{};
+  g('sST').textContent=g('fT').value||d.telefonista||'—';
+  g('sOC').textContent=occs.length;
+  let s='⚪ Não iniciado';
+  if(d.visto)s='✅ Vistado';
+  else if(d.finalizado)s='📌 Finalizado';
+  else if(d.rascunho)s='📝 Rascunho';
+  g('sSTt').textContent=s;
+}
+
+// ═══ ALERTS ═══
+function checkAlerts2(){
+  const d=livro||{},box=g('AB');box.innerHTML='';
+  const isToday=dk(curDate)===dk(new Date());
+  if(isToday&&!d.finalizado){
+    const now=new Date(),end=new Date();end.setHours(7,0,0,0);
+    end.setDate(end.getDate()+1);
+    const h=(end-now)/3600000;
+    if(h<4)addAl(box,'⚠️ Menos de 4h para fim do serviço. Livro ainda não finalizado!','aw');
+  }
+  if(d.visto)addAl(box,'✅ Livro finalizado e vistado pelo Cap. Jorge Luis.','ag');
+  else if(d.finalizado)addAl(box,'📌 Livro finalizado. Aguardando visto do SubComandante.','ai');
+}
+function addAl(box,msg,cls){
+  const d=document.createElement('div');d.className='al '+cls;d.textContent=msg;box.appendChild(d);
+}
+
+// ═══ SAVE DRAFT ═══
+async function saveDraft(){
+  if(!valEscala())return;
+  const p=mkPay(false);
+  livro={...(livro||{}),...p,rascunho:true};
+  localStorage.setItem('livro_'+dk(curDate), JSON.stringify(livro));
+  try{if(db)await db.collection('livros').doc(dk(curDate)).set(p,{merge:true});}catch(e){}
+  toast('Rascunho salvo! ✓');
+  updateStats();renderFin();renderVisto();lockForm(false);
+}
+
+function mkPay(fin){
+  return{
+    telefonista:g('fT').value,permuta:g('fP').value,
+    sinesp:g('fSI').value,municipio:g('fMU').value,
+    ocorrencias:JSON.parse(JSON.stringify(occs)),
+    rascunho:true,finalizado:fin,
+    ...(fin?{finalizedBy:curUser,finalizedAt:new Date().toISOString()}:{}),
+    updatedAt:new Date().toISOString(),dataServico:dk(curDate)
+  };
+}
+
+// ═══ FINALIZAR ═══
+function finalizarLivro(){
+  if(!valEscala()||!valOccs())return;
+  g('FP').value='';g('FE').style.display='none';
+  g('MF').classList.add('open');
+  setTimeout(()=>g('FP').focus(),100);
+}
+async function confFin(){
+  const pin=g('FP').value;
+  if(PINS[curUser]!==pin){
+    g('FE').textContent='PIN incorreto!';g('FE').style.display='block';return;
+  }
+  closeMod('MF');
+  const p=mkPay(true);
+  livro={...(livro||{}),...p};
+  localStorage.setItem('livro_'+dk(curDate), JSON.stringify(livro));
+  try{if(db)await db.collection('livros').doc(dk(curDate)).set(p,{merge:true});}catch(e){}
+  toast('Livro finalizado com sucesso! ✅');
+  lockForm(true);updateStats();renderFin();renderVisto();checkAlerts2();
+  const d2=curDate.toLocaleDateString('pt-BR'),tel=g('fT').value;
+  const m=encodeURIComponent(`✅ *6° BBM — Livro Finalizado*\n📅 Serviço: ${d2}\n👮 Telefonista: ${tel}\n⏰ Finalizado: ${new Date().toLocaleTimeString('pt-BR')}\nAguarda seu visto, Senhor.`);
+  sendWA(WA_CAP,WA_KEY_CAP,m);sendWA(WA_QTL,WA_KEY_QTL,m);
+  clearAlerts();loadHist();
+}
+
+function renderFin(){
+  const d=livro||{},e=g('FI');
+  const eb=g('editBox'), sb=g('livroStatusBdg');
+  if(d.visto){
+    e.style.display='block';
+    e.innerHTML='<div class="al ag" style="margin-top:10px">✅ Finalizado por <strong>'+(d.finalizedBy||'—')+'</strong> e vistado pelo Cap. Jorge Luis em '+new Date(d.vistoAt).toLocaleString('pt-BR')+'.</div>';
+    if(eb)eb.style.display='none';
+    if(sb){sb.className='bdg bg';sb.textContent='Vistado';}
+  } else if(d.finalizado){
+    e.style.display='block';
+    e.innerHTML='<div class="al ag" style="margin-top:10px">✅ Finalizado por <strong>'+(d.finalizedBy||'—')+'</strong> em '+(d.finalizedAt?new Date(d.finalizedAt).toLocaleString('pt-BR'):'—')+'.<br><span style="color:var(--gold);font-size:11px">⏳ Aguardando visto do Cap. Jorge Luis.</span></div>';
+    // Mostra botão editar apenas para telefonistas (não cap)
+    if(eb) eb.style.display=(curUser!=='Cap. Jorge Luis')?'flex':'none';
+    if(sb){sb.className='bdg bo';sb.textContent='Finalizado — Aguardando Visto';}
+  } else if(d.rascunho){
+    e.style.display='block';
+    e.innerHTML='<div class="al ai" style="margin-top:10px">📝 Rascunho salvo. Preencha todos os campos e finalize o livro.</div>';
+    if(eb)eb.style.display='none';
+    if(sb){sb.className='bdg bi';sb.textContent='Rascunho';}
+  } else {
+    e.style.display='none';
+    if(eb)eb.style.display='none';
+    if(sb){sb.className='';sb.textContent='';}
+  }
+}
+
+function reabrirLivro(){
+  if(curUser==='Cap. Jorge Luis'){toast('Apenas o telefonista pode editar o livro.','err');return;}
+  if(!livro||!livro.finalizado){return;}
+  if(livro.visto){toast('Livro já vistado. Não pode ser editado.','err');return;}
+  if(!confirm('Deseja reabrir o livro para edição? Será necessário finalizar novamente.'))return;
+  livro.finalizado=false;livro.rascunho=true;
+  delete livro.finalizedBy;delete livro.finalizedAt;
+  localStorage.setItem('livro_'+dk(curDate), JSON.stringify(livro));
+  try{if(db)db.collection('livros').doc(dk(curDate)).set({finalizado:false,rascunho:true},{merge:true});}catch(e){}
+  toast('Livro reaberto para edição. ✏️');
+  lockForm(false);renderFin();renderVisto();updateStats();
+  g('VB').style.display='none';
+}
+
+// ═══ VISTO ═══
+function renderVisto(){
+  const d=livro||{},box=g('VB');
+  if(!d.finalizado){box.style.display='none';return;}
+  // Mostra caixa de visto: cap sempre vê; outros só veem se já foi vistado
+  const showVisto = curUser==='Cap. Jorge Luis' || d.visto;
+  box.style.display = showVisto ? 'block' : 'none';
+  if(!showVisto) return;
+  g('VD').value=new Date().toLocaleDateString('pt-BR');
+  if(d.visto){
+    const ov=g('VO');ov.style.display='block';
+    ov.textContent='✅ Visto registrado pelo Cap. Jorge Luis em '+new Date(d.vistoAt).toLocaleString('pt-BR');
+    g('VP').disabled=true;
+    const bv=g('btnVisto');if(bv)bv.disabled=true;
+    const pb=g('pdfBox');if(pb)pb.style.display='block';
+  } else {
+    // Só cap pode assinar; outros veem aviso
+    if(curUser!=='Cap. Jorge Luis'){
+      g('VP').disabled=true;
+      const bv=g('btnVisto');if(bv)bv.disabled=true;
+    }
+  }
+}
+async function darVisto(){
+  if(PINS['Cap. Jorge Luis']!==g('VP').value){toast('PIN incorreto!','err');return;}
+  const u={visto:true,vistoBy:'Cap. Jorge Luis',vistoAt:new Date().toISOString()};
+  try{if(db)await db.collection('livros').doc(dk(curDate)).set(u,{merge:true});}catch(e){}
+  livro={...(livro||{}),...u};
+  localStorage.setItem('livro_'+dk(curDate), JSON.stringify(livro));
+  toast('Visto registrado! 🪖');renderVisto();updateStats();checkAlerts2();
+  const pb2=g('pdfBox');if(pb2)pb2.style.display='block';
+  const d2=curDate.toLocaleDateString('pt-BR'),tel=g('fT').value;
+  const m=encodeURIComponent(`🪖 *6° BBM — Visto Registrado*\n📅 Serviço: ${d2}\n👮 Telefonista: ${tel}\nVisto pelo Cap. Jorge Luis às ${new Date().toLocaleTimeString('pt-BR')}`);
+  sendWA(WA_CAP,WA_KEY_CAP,m);
+}
+
+// ═══ WHATSAPP CallMeBot ═══
+function sendWA(phone,key,msg){
+  if(!key||key.startsWith('APIKEY')){
+    console.warn('CallMeBot: configure a apikey para '+phone);
+    toast('⚠️ Configure as APIKEYs CallMeBot no código','warn');return;
+  }
+  const url=`https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${msg}&apikey=${key}`;
+  fetch(url).catch(()=>{});
+}
+
+// ═══ ALERTS SCHEDULE ═══
+function clearAlerts(){alerts.forEach(clearInterval);alerts=[];}
+function startAlertSchedule(){
+  clearAlerts();
+  const iv=setInterval(async()=>{
+    const key=dk(new Date());let data=null;
+    try{if(db){const doc=await db.collection('livros').doc(key).get();if(doc.exists)data=doc.data();}}catch(e){}
+    if(!data||!data.finalizado){
+      const m=encodeURIComponent(`⚠️ *6° BBM — ALERTA*\nO Livro de Telefonistas de ${new Date().toLocaleDateString('pt-BR')} NÃO foi finalizado!\n⏰ ${new Date().toLocaleTimeString('pt-BR')}`);
+      sendWA(WA_CAP,WA_KEY_CAP,m);sendWA(WA_QTL,WA_KEY_QTL,m);
+    } else {clearAlerts();}
+  },4*60*60*1000);
+  alerts.push(iv);
+}
+
+// ═══ HISTORY ═══
+async function loadHist(){
+  const el=g('HB');
+  try{
+    if(!db)throw new Error();
+    const snap=await db.collection('livros').orderBy('dataServico','desc').limit(30).get();
+    if(snap.empty){el.innerHTML='<p style="color:var(--muted);font-size:13px">Nenhum registro.</p>';return;}
+    let h='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Data</th><th>Telefonista</th><th>Permuta</th><th>Ocorrências</th><th>Status</th><th>Visto</th></tr></thead><tbody>';
+    snap.forEach(d=>{
+      const v=d.data();
+      const st=v.finalizado?'<span class="bdg bg">Finalizado</span>':'<span class="bdg br">Pendente</span>';
+      const vi=v.visto?'<span class="bdg bg">✅ Sim</span>':'<span class="bdg bi">Não</span>';
+      h+=`<tr><td>${v.dataServico||'—'}</td><td>${v.telefonista||'—'}</td><td>${v.permuta||'—'}</td><td>${(v.ocorrencias||[]).length}</td><td>${st}</td><td>${vi}</td></tr>`;
+    });
+    h+='</tbody></table></div>';el.innerHTML=h;
+  } catch(e){
+    el.innerHTML='<div class="al aw">Configure o Firebase para ver o histórico.</div>';
+  }
+}
+
+// ═══ VALIDATE ═══
+function valEscala(){if(!g('fT').value){toast('Selecione o Telefonista Escalado!','err');return false;}return true;}
+function valOccs(){
+  if(!occs.length){toast('Adicione ao menos 1 ocorrência!','err');return false;}
+  for(let i=0;i<occs.length;i++){
+    const o=occs[i];
+    if(!o.tipo){toast(`Ocorrência #${i+1}: Tipo obrigatório!`,'err');return false;}
+    if(!o.solicitante){toast(`Ocorrência #${i+1}: Solicitante obrigatório!`,'err');return false;}
+    if(!o.endereco){toast(`Ocorrência #${i+1}: Endereço obrigatório!`,'err');return false;}
+    if(!o.hora){toast(`Ocorrência #${i+1}: Hora obrigatória!`,'err');return false;}
+    if(!o.descricao){toast(`Ocorrência #${i+1}: Descrição obrigatória!`,'err');return false;}
+  }
+  return true;
+}
+
+// ═══ UI ═══
+function g(id){return document.getElementById(id);}
+function openTab(id,btn){
+  document.querySelectorAll('.tpane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  g(id).classList.add('active');btn.classList.add('active');
+  if(id==='TH')loadHist();
+}
+function closeMod(id){g(id).classList.remove('open');}
+function toast(msg,t='ok'){
+  const c=g('TC'),d=document.createElement('div');
+  d.className='toast'+(t==='err'?' err':t==='warn'?' warn':'');
+  d.textContent=msg;c.appendChild(d);
+  setTimeout(()=>d.remove(),4200);
+}
+
+
+// ═══ GERAR PDF ═══
+function gerarPDF(){
+  const d=livro||{};
+  if(!d.visto){toast('Assine o visto antes de gerar o PDF','warn');return;}
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210,margin=15;
+  let y=15;
+
+  // Função helpers
+  const line=(x1,y1,x2,y2,w=0.3,c=[0,0,0])=>{doc.setDrawColor(...c);doc.setLineWidth(w);doc.line(x1,y1,x2,y2);};
+  const rect=(x,yy,w,h,fill=false,r=[200,200,200])=>{
+    if(fill){doc.setFillColor(...r);doc.rect(x,yy,w,h,'F');}
+    else{doc.setDrawColor(150,150,150);doc.setLineWidth(0.3);doc.rect(x,yy,w,h);}
+  };
+  const txt=(t,x,yy,sz=9,bold=false,color=[40,40,40],align='left')=>{
+    doc.setFontSize(sz);doc.setFont('helvetica',bold?'bold':'normal');
+    doc.setTextColor(...color);doc.text(String(t),x,yy,{align});
+  };
+
+  // ── CABEÇALHO ──
+  rect(margin,y,W-2*margin,22,true,[240,242,245]);
+  rect(margin,y,W-2*margin,22);
+  txt('ESTADO DO MARANHÃO',W/2,y+5,9,true,[100,30,20],'center');
+  txt('CORPO DE BOMBEIROS MILITAR',W/2,y+10,9,true,[100,30,20],'center');
+  txt('6° BATALHÃO DE BOMBEIROS MILITAR',W/2,y+15,10,true,[100,30,20],'center');
+  // caixa visto em
+  rect(margin,y,38,22);
+  txt('VISTO EM:',margin+2,y+5,7,true,[80,80,80]);
+  const vData=d.vistoAt?new Date(d.vistoAt).toLocaleDateString('pt-BR'):'____/____/______';
+  txt(vData,margin+2,y+11,8,false,[40,40,40]);
+  txt('SUB.CMT 6°BBM',margin+2,y+18,7,true,[80,80,80]);
+  y+=27;
+
+  // ── TÍTULO ──
+  const ds=curDate.toLocaleDateString('pt-BR');
+  const ds2=new Date(curDate);ds2.setDate(ds2.getDate()+1);
+  const tit=`PARTE DIÁRIA DO SERVIÇO DE TELEFONISTA DO 6° BBM — ${ds} PARA ${ds2.toLocaleDateString('pt-BR')}`;
+  txt(tit,W/2,y,8,true,[50,50,50],'center');
+  y+=7;
+
+  // ── ESCALA ──
+  rect(margin,y,W-2*margin,6,true,[192,57,43]);
+  txt('I. ESCALA DE SERVIÇO',margin+3,y+4,9,true,[255,255,255]);
+  y+=6;
+  rect(margin,y,W-2*margin,6,true,[230,230,230]);
+  const cw=(W-2*margin)/3;
+  txt('FUNÇÃO',margin+2,y+4,8,true,[60,60,60]);
+  txt('TELEFONISTA ESCALADO',margin+cw+2,y+4,8,true,[60,60,60]);
+  txt('PERMUTA',margin+cw*2+2,y+4,8,true,[60,60,60]);
+  line(margin,y+6,W-margin,y+6);
+  line(margin+cw,y,margin+cw,y+12,0.3);
+  line(margin+cw*2,y,margin+cw*2,y+12,0.3);
+  y+=6;
+  rect(margin,y,W-2*margin,7);
+  txt('TELEFONISTA',margin+2,y+5,8,false,[60,60,60]);
+  txt(d.telefonista||'—',margin+cw+2,y+5,8,false,[20,20,20]);
+  txt(d.permuta||'—',margin+cw*2+2,y+5,8,false,[20,20,20]);
+  line(margin+cw,y,margin+cw,y+7,0.3);
+  line(margin+cw*2,y,margin+cw*2,y+7,0.3);
+  y+=10;
+
+  // ── OCORRÊNCIAS ──
+  const ocList=d.ocorrencias||[];
+  if(ocList.length>0){
+    rect(margin,y,W-2*margin,6,true,[192,57,43]);
+    txt('II. OCORRÊNCIAS ('+ocList.length+')',margin+3,y+4,9,true,[255,255,255]);
+    y+=6;
+
+    ocList.forEach((o,idx)=>{
+      if(y>260){doc.addPage();y=15;}
+      // header ocorrência
+      rect(margin,y,W-2*margin,5,true,[245,245,245]);
+      txt('Ocorrência #'+String(idx+1).padStart(2,'0'),margin+3,y+3.5,8,true,[192,57,43]);
+      y+=5;
+      // campos
+      const rows=[
+        ['Tipo de Ocorrência',o.tipo||'—','Solicitante / Meio',o.solicitante||'—'],
+        ['Endereço',o.endereco||'—','Município',o.cidade||'—'],
+        ['Ponto de Referência',o.referencia||'—','Hora',o.hora||'—'],
+        ['Tempo de Resposta',o.tResp||'—','Tempo de Atendimento',o.tAtend||'—'],
+      ];
+      const hw=(W-2*margin)/2;
+      rows.forEach(([l1,v1,l2,v2])=>{
+        if(y>265){doc.addPage();y=15;}
+        rect(margin,y,hw,6);rect(margin+hw,y,hw,6);
+        txt(l1+':',margin+2,y+4,7,true,[100,100,100]);
+        const fv1=doc.splitTextToSize(String(v1),hw-20);
+        txt(fv1[0],margin+30,y+4,7,false,[20,20,20]);
+        txt(l2+':',margin+hw+2,y+4,7,true,[100,100,100]);
+        const fv2=doc.splitTextToSize(String(v2),hw-20);
+        txt(fv2[0],margin+hw+28,y+4,7,false,[20,20,20]);
+        y+=6;
+      });
+      // descrição
+      if(y>255){doc.addPage();y=15;}
+      const descLines=doc.splitTextToSize(o.descricao||'—',W-2*margin-4);
+      const descH=Math.max(10,descLines.length*4+4);
+      rect(margin,y,W-2*margin,descH);
+      txt('Descrição:',margin+2,y+4,7,true,[100,100,100]);
+      descLines.forEach((l,li)=>txt(l,margin+2,y+8+li*4,7,false,[20,20,20]));
+      y+=descH+3;
+    });
+  } else {
+    rect(margin,y,W-2*margin,6,true,[192,57,43]);
+    txt('II. OCORRÊNCIAS',margin+3,y+4,9,true,[255,255,255]);
+    y+=6;
+    rect(margin,y,W-2*margin,8);
+    txt('Nenhuma ocorrência registrada neste serviço.',margin+2,y+5,8,false,[120,120,120]);
+    y+=11;
+  }
+
+  // ── SINESP ──
+  if(d.sinesp||d.municipio){
+    if(y>260){doc.addPage();y=15;}
+    rect(margin,y,W-2*margin,6,true,[192,57,43]);
+    txt('III. SINESP CAD',margin+3,y+4,9,true,[255,255,255]);
+    y+=6;
+    rect(margin,y,W-2*margin,7);
+    txt('Nº SINESP CAD:',margin+2,y+4.5,7,true,[80,80,80]);
+    txt(d.sinesp||'—',margin+35,y+4.5,8,false,[20,20,20]);
+    txt('Município:',margin+110,y+4.5,7,true,[80,80,80]);
+    txt(d.municipio||'—',margin+130,y+4.5,7,false,[20,20,20]);
+    y+=10;
+  }
+
+  // ── ASSINATURAS ──
+  if(y>240){doc.addPage();y=15;}
+  y+=5;
+  line(margin,y,margin+55,y,0.5);
+  line(W/2-27.5,y,W/2+27.5,y,0.5);
+  line(W-margin-55,y,W-margin,y,0.5);
+  txt('1° TELEFONISTA',margin+27.5,y+4,7,true,[80,80,80],'center');
+  txt('CHEFE DE SOCORRO',W/2,y+4,7,true,[80,80,80],'center');
+  txt('TELEFONISTA',W-margin-27.5,y+4,7,true,[80,80,80],'center');
+  y+=12;
+
+  // ── VISTO CAPITÃO ──
+  rect(margin,y,W-2*margin,18,true,[255,250,230]);
+  rect(margin,y,W-2*margin,18);
+  line(margin,y,W-margin,y,0.6,[192,57,43]);
+  txt('VISTO DO SUBCOMANDANTE — CAP. JORGE LUIS',W/2,y+5,9,true,[100,30,20],'center');
+  const vistoHora=d.vistoAt?new Date(d.vistoAt).toLocaleString('pt-BR'):'—';
+  txt('Data/Hora: '+vistoHora,W/2,y+10,8,false,[40,40,40],'center');
+  txt('Assinado digitalmente pelo sistema — 6° BBM',W/2,y+15,7,false,[100,100,100],'center');
+  y+=22;
+
+  // ── RODAPÉ ──
+  const pageCount=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pageCount;i++){
+    doc.setPage(i);
+    txt('6° Batalhão de Bombeiros Militar — Maranhão | Gerado em '+new Date().toLocaleString('pt-BR'),W/2,292,7,false,[150,150,150],'center');
+    txt('Página '+i+' de '+pageCount,W-margin,292,7,false,[150,150,150],'right');
+  }
+
+  const fname='Livro_Telefonista_6BBM_'+dk(curDate)+'.pdf';
+  doc.save(fname);
+  toast('PDF gerado: '+fname);
+}
+
+// Iniciar monitoramento após carregar
+window.addEventListener('load',()=>{
+  const h=new Date().getHours();
+  if(h>=7)startAlertSchedule();
+});
+</script>
+</body>
+</html>
