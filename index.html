@@ -197,6 +197,17 @@ body{font-family:'Inter',sans-serif;background:var(--darker);color:var(--txt);mi
 @media(max-width:480px){.pcard.cap{grid-column:span 1}}
 
 .sep{border:none;border-top:1px solid var(--bdr);margin:14px 0}
+.cday{padding:6px 2px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;
+  text-align:center;transition:all .15s;color:var(--muted);background:transparent;border:none}
+.cday:hover{background:var(--s2);color:var(--txt)}
+.cday.today{border:1px solid var(--gold);color:var(--gold)}
+.cday.selected{background:var(--red);color:#fff}
+.cday.has-visto{color:#2ecc71;font-weight:700}
+.cday.has-fin{color:var(--gold)}
+.cday.has-draft{color:#3498db}
+.cday.empty{cursor:default;color:transparent}
+.hist-row{cursor:pointer;transition:background .15s}
+.hist-row:hover td{background:rgba(192,57,43,.08)!important}
 </style>
 </head>
 <body>
@@ -256,15 +267,39 @@ body{font-family:'Inter',sans-serif;background:var(--darker);color:var(--txt);mi
 <!-- TAB LIVRO -->
 <div id="TL" class="tpane active">
 
+  <!-- CALENDÁRIO -->
   <div class="cal">
     <span class="clabel">📅 Serviço</span>
     <div class="cnav">
       <button class="cnb" onclick="navD(-1)">‹</button>
-      <div class="cdate" id="CDT">—</div>
+      <div class="cdate" id="CDT" onclick="toggleCal()" style="cursor:pointer;user-select:none" title="Clique para abrir calendário">—</div>
       <button class="cnb" onclick="navD(1)">›</button>
     </div>
     <div class="sinfo">Período: <strong id="SP">—</strong></div>
     <button class="btn bs bsm" style="margin-left:auto" onclick="goToday()">Hoje</button>
+  </div>
+  <!-- POPUP CALENDÁRIO -->
+  <div id="calPop" style="display:none;position:relative;z-index:200;margin-bottom:12px">
+    <div style="background:var(--s1);border:1px solid var(--bdr);border-radius:12px;padding:16px;max-width:340px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <button class="cnb" onclick="navCalMes(-1)">‹</button>
+        <span id="calMesTxt" style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:var(--gold)"></span>
+        <button class="cnb" onclick="navCalMes(1)">›</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;margin-bottom:6px">
+        <span style="font-size:10px;color:var(--muted);padding:4px">Dom</span>
+        <span style="font-size:10px;color:var(--muted);padding:4px">Seg</span>
+        <span style="font-size:10px;color:var(--muted);padding:4px">Ter</span>
+        <span style="font-size:10px;color:var(--muted);padding:4px">Qua</span>
+        <span style="font-size:10px;color:var(--muted);padding:4px">Qui</span>
+        <span style="font-size:10px;color:var(--muted);padding:4px">Sex</span>
+        <span style="font-size:10px;color:var(--muted);padding:4px">Sáb</span>
+      </div>
+      <div id="calDays" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px"></div>
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap" id="calLegend">
+        <span style="font-size:10px;color:var(--muted)">● Vistado &nbsp; ○ Finalizado &nbsp; · Rascunho</span>
+      </div>
+    </div>
   </div>
 
   <div class="stats">
@@ -849,23 +884,117 @@ function startAlertSchedule(){
 }
 
 // ═══ HISTORY ═══
+// cache de status dos dias para o calendário
+let calCache={};
+let calViewDate=new Date();
+
 async function loadHist(){
   const el=g('HB');
   try{
     if(!db)throw new Error();
-    const snap=await db.collection('livros').orderBy('dataServico','desc').limit(30).get();
+    const snap=await db.collection('livros').orderBy('dataServico','desc').limit(60).get();
     if(snap.empty){el.innerHTML='<p style="color:var(--muted);font-size:13px">Nenhum registro.</p>';return;}
-    let h='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Data</th><th>Telefonista</th><th>Permuta</th><th>Ocorrências</th><th>Status</th><th>Visto</th></tr></thead><tbody>';
+    calCache={};
+    let h='<div style="overflow-x:auto"><table class="tbl"><thead><tr>';
+    h+='<th>Data</th><th>Telefonista</th><th>Permuta</th><th>Ocorrências</th><th>Status</th><th>Visto</th><th>Ação</th>';
+    h+='</tr></thead><tbody>';
     snap.forEach(d=>{
       const v=d.data();
-      const st=v.finalizado?'<span class="bdg bg">Finalizado</span>':'<span class="bdg br">Pendente</span>';
-      const vi=v.visto?'<span class="bdg bg">✅ Sim</span>':'<span class="bdg bi">Não</span>';
-      h+=`<tr><td>${v.dataServico||'—'}</td><td>${v.telefonista||'—'}</td><td>${v.permuta||'—'}</td><td>${(v.ocorrencias||[]).length}</td><td>${st}</td><td>${vi}</td></tr>`;
+      calCache[v.dataServico]={visto:v.visto,finalizado:v.finalizado,rascunho:v.rascunho};
+      const st=v.visto?'<span class="bdg bg">✅ Vistado</span>':v.finalizado?'<span class="bdg bo">📌 Finalizado</span>':'<span class="bdg bi">📝 Rascunho</span>';
+      const vi=v.visto?'<span class="bdg bg">✅ Sim</span>':'<span class="bdg br">Não</span>';
+      const dtBR=v.dataServico?v.dataServico.split('-').reverse().join('/'):'—';
+      h+=`<tr class="hist-row" onclick="abrirDiaDaHist('${v.dataServico}')">`;
+      h+=`<td><strong>${dtBR}</strong></td><td>${v.telefonista||'—'}</td><td>${v.permuta||'—'}</td>`;
+      h+=`<td>${(v.ocorrencias||[]).length} ocorr.</td><td>${st}</td><td>${vi}</td>`;
+      h+=`<td><button class="btn bs bsm" onclick="event.stopPropagation();abrirDiaDaHist('${v.dataServico}')">📋 Abrir</button></td>`;
+      h+='</tr>';
     });
-    h+='</tbody></table></div>';el.innerHTML=h;
+    h+='</tbody></table></div>';
+    h+='<p style="font-size:11px;color:var(--muted);margin-top:10px">Clique em qualquer linha para abrir o livro do dia.</p>';
+    el.innerHTML=h;
+    renderCalDays();
   } catch(e){
-    el.innerHTML='<div class="al aw">Configure o Firebase para ver o histórico.</div>';
+    // tenta localStorage
+    const keys=Object.keys(localStorage).filter(k=>k.startsWith('livro_')).sort().reverse();
+    if(!keys.length){el.innerHTML='<div class="al aw">Nenhum registro local encontrado.</div>';return;}
+    calCache={};
+    let h='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Data</th><th>Telefonista</th><th>Status</th><th>Ação</th></tr></thead><tbody>';
+    keys.slice(0,30).forEach(k=>{
+      const v=JSON.parse(localStorage.getItem(k));
+      const key=k.replace('livro_','');
+      calCache[key]={visto:v.visto,finalizado:v.finalizado,rascunho:v.rascunho};
+      const st=v.visto?'<span class="bdg bg">✅ Vistado</span>':v.finalizado?'<span class="bdg bo">📌 Finalizado</span>':'<span class="bdg bi">📝 Rascunho</span>';
+      const dtBR=key.split('-').reverse().join('/');
+      h+=`<tr class="hist-row" onclick="abrirDiaDaHist('${key}')">`;
+      h+=`<td><strong>${dtBR}</strong></td><td>${v.telefonista||'—'}</td><td>${st}</td>`;
+      h+=`<td><button class="btn bs bsm" onclick="event.stopPropagation();abrirDiaDaHist('${key}')">📋 Abrir</button></td>`;
+      h+='</tr>';
+    });
+    h+='</tbody></table></div>';
+    el.innerHTML=h;
+    renderCalDays();
   }
+}
+
+function abrirDiaDaHist(dateStr){
+  // navega para o dia e abre a aba livro
+  const parts=dateStr.split('-');
+  curDate=new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+  openTab('TL', document.querySelector('.tab'));
+  document.querySelectorAll('.tab').forEach(b=>{
+    if(b.textContent.includes('Livro'))b.click();
+  });
+  loadDay();
+}
+
+// ═══ CALENDÁRIO VISUAL ═══
+function toggleCal(){
+  const p=g('calPop');
+  if(p.style.display==='none'){
+    calViewDate=new Date(curDate);
+    renderCalDays();
+    p.style.display='block';
+  } else {
+    p.style.display='none';
+  }
+}
+
+function navCalMes(n){
+  calViewDate.setMonth(calViewDate.getMonth()+n);
+  renderCalDays();
+}
+
+function renderCalDays(){
+  const m=calViewDate.getMonth(), y=calViewDate.getFullYear();
+  const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const el=g('calMesTxt');if(el)el.textContent=meses[m]+' '+y;
+  const el2=g('calDays');if(!el2)return;
+  const first=new Date(y,m,1).getDay();
+  const dias=new Date(y,m+1,0).getDate();
+  const hoje=dk(new Date());
+  const sel=dk(curDate);
+  let html='';
+  for(let i=0;i<first;i++) html+='<button class="cday empty" disabled></button>';
+  for(let d=1;d<=dias;d++){
+    const key=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const info=calCache[key]||{};
+    let cls='cday';
+    if(key===sel) cls+=' selected';
+    else if(key===hoje) cls+=' today';
+    else if(info.visto) cls+=' has-visto';
+    else if(info.finalizado) cls+=' has-fin';
+    else if(info.rascunho) cls+=' has-draft';
+    html+=`<button class="${cls}" onclick="selecionarDia('${key}')">${d}</button>`;
+  }
+  el2.innerHTML=html;
+}
+
+function selecionarDia(key){
+  const parts=key.split('-');
+  curDate=new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+  g('calPop').style.display='none';
+  loadDay();
 }
 
 // ═══ VALIDATE ═══
