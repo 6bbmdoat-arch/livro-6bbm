@@ -424,16 +424,40 @@ body{font-family:'Inter',sans-serif;background:var(--darker);color:var(--txt);mi
   <div class="sec">
     <div class="shdr"><span class="stitle">PINs de Acesso</span><span class="bdg br">Confidencial</span></div>
     <div class="sbody">
-      <div class="al aw">⚠️ Guarde estes PINs com segurança. Não compartilhe com terceiros.</div>
-      <div class="pgrid">
-        <div class="pcard"><div class="pn">BC Felipe</div><div class="pc">3767</div></div>
-        <div class="pcard"><div class="pn">BC Lucas</div><div class="pc">3418</div></div>
-        <div class="pcard"><div class="pn">BC Rodrigo</div><div class="pc">5246</div></div>
-        <div class="pcard"><div class="pn">BC Maycon</div><div class="pc">0849</div></div>
-        <div class="pcard cap"><div class="pn">Cap. Jorge Luis — SubCmt (Visto)</div><div class="pc">3252</div></div>
+
+      <!-- TELA DE SENHA -->
+      <div id="pinLock" style="">
+        <div class="al aw" style="margin-bottom:16px">🔒 Área restrita. Digite a senha de administrador para visualizar os PINs.</div>
+        <div class="fr fr2">
+          <div class="fg">
+            <label class="fl">Senha de Administrador</label>
+            <input class="fi" type="password" id="adminSenha" placeholder="••••" maxlength="10"
+              onkeydown="if(event.key==='Enter')verificarSenhaAdmin()">
+          </div>
+          <div class="fg" style="justify-content:flex-end;padding-top:18px">
+            <button class="btn bp" onclick="verificarSenhaAdmin()">🔓 Desbloquear</button>
+          </div>
+        </div>
+        <div id="adminSenhaErr" class="perr">Senha incorreta.</div>
       </div>
-      <div class="sep"></div>
-      <p style="font-size:11px;color:var(--muted)">Para alterar PINs, contate o administrador do sistema.</p>
+
+      <!-- CONTEÚDO DOS PINS (oculto por padrão) -->
+      <div id="pinContent" style="display:none">
+        <div class="al aw">⚠️ Guarde estes PINs com segurança. Não compartilhe com terceiros.</div>
+        <div class="pgrid">
+          <div class="pcard"><div class="pn">BC Felipe</div><div class="pc">3767</div></div>
+          <div class="pcard"><div class="pn">BC Lucas</div><div class="pc">3418</div></div>
+          <div class="pcard"><div class="pn">BC Rodrigo</div><div class="pc">5246</div></div>
+          <div class="pcard"><div class="pn">BC Maycon</div><div class="pc">0849</div></div>
+          <div class="pcard cap"><div class="pn">Cap. Jorge Luis — SubCmt (Visto)</div><div class="pc">3252</div></div>
+        </div>
+        <div class="sep"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <p style="font-size:11px;color:var(--muted)">Para alterar PINs, contate o administrador do sistema.</p>
+          <button class="btn bs bsm" onclick="bloquearPins()">🔒 Bloquear</button>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -997,6 +1021,28 @@ function selecionarDia(key){
   loadDay();
 }
 
+// ═══ SENHA ADMIN PINS ═══
+const ADMIN_SENHA = '1024';
+function verificarSenhaAdmin(){
+  const v = g('adminSenha').value;
+  if(v === ADMIN_SENHA){
+    g('pinLock').style.display = 'none';
+    g('pinContent').style.display = 'block';
+    g('adminSenhaErr').style.display = 'none';
+    g('adminSenha').value = '';
+  } else {
+    g('adminSenhaErr').style.display = 'block';
+    g('adminSenha').value = '';
+    g('adminSenha').focus();
+  }
+}
+function bloquearPins(){
+  g('pinLock').style.display = 'block';
+  g('pinContent').style.display = 'none';
+}
+// Bloquear ao trocar de aba
+const _origOpenTab = openTab;
+
 // ═══ VALIDATE ═══
 function valEscala(){if(!g('fT').value){toast('Selecione o Telefonista Escalado!','err');return false;}return true;}
 function valOccs(){
@@ -1015,6 +1061,12 @@ function valOccs(){
 // ═══ UI ═══
 function g(id){return document.getElementById(id);}
 function openTab(id,btn){
+  // bloquear pins ao sair da aba
+  if(id!=='TP'){
+    const pl=g('pinLock');const pc=g('pinContent');
+    if(pl)pl.style.display='block';
+    if(pc)pc.style.display='none';
+  }
   document.querySelectorAll('.tpane').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
   g(id).classList.add('active');btn.classList.add('active');
