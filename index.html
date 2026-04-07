@@ -502,7 +502,7 @@ try{ db = firebase.firestore(); } catch(e){ db=null; }
 const PINS={'BC Felipe':'3767','BC Lucas':'3418','BC Rodrigo':'5246','BC Maycon':'0849','Cap. Jorge Luis':'3252'};
 const WA_CAP='+5598982787865', WA_QTL='+5599982489658';
 const WA_CALLMEBOT='+34644059217'; // número CallMeBot ativo
-const WA_KEY_CAP='APIKEY_CAPITAO'; // configurar amanhã com Cap. Jorge Luis
+const WA_KEY_CAP='2642025'; // Cap. Jorge Luis ✓
 const WA_KEY_QTL='8205427'; // quartel configurado ✓
 
 const TIPOS_OCC=[
@@ -880,6 +880,7 @@ async function darVisto(){
   const d2=curDate.toLocaleDateString('pt-BR'),tel=g('fT').value;
   const m=encodeURIComponent(`🪖 *6° BBM — Visto Registrado*\n📅 Serviço: ${d2}\n👮 Telefonista: ${tel}\nVisto pelo Cap. Jorge Luis às ${new Date().toLocaleTimeString('pt-BR')}`);
   sendWA(WA_CAP,WA_KEY_CAP,m);
+  sendWA(WA_QTL,WA_KEY_QTL,m);
 }
 
 // ═══ WHATSAPP CallMeBot ═══
