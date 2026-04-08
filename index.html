@@ -301,11 +301,11 @@ body > *{position:relative;z-index:1;}
     <span class="clabel">📅 Serviço</span>
     <div class="cnav">
       <button class="cnb" onclick="navD(-1)">‹</button>
-      <div class="cdate" id="CDT" onclick="toggleCal()" style="cursor:pointer;user-select:none" title="Clique para abrir calendário">—</div>
+      <div class="cdate" id="CDT" onclick="abrirModalData()" style="cursor:pointer;user-select:none" title="Clique para trocar data">—</div>
       <button class="cnb" onclick="navD(1)">›</button>
     </div>
     <div class="sinfo">Período: <strong id="SP">—</strong></div>
-    <button class="btn bs bsm" style="margin-left:auto" onclick="goToday()">Hoje</button>
+    <button class="btn bs bsm" style="margin-left:auto" onclick="abrirModalData()">📅 Trocar Data</button>
   </div>
   <!-- POPUP CALENDÁRIO -->
   <div id="calPop" style="display:none;position:relative;z-index:200;margin-bottom:12px">
@@ -476,6 +476,35 @@ body > *{position:relative;z-index:1;}
 </div><!-- /main -->
 </div><!-- /APP -->
 
+<!-- MODAL SELEÇÃO DE DATA -->
+<div class="mov" id="modalData">
+  <div class="modal" style="max-width:380px">
+    <div class="mtitle">📅 Selecionar Data do Serviço</div>
+    <p class="msub">Escolha o dia referente ao serviço que será registrado.</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <button class="cnb" onclick="navModalCal(-1)">‹</button>
+      <span id="mdCalMes" style="font-family:'Oswald',sans-serif;font-size:16px;font-weight:600;color:var(--gold)"></span>
+      <button class="cnb" onclick="navModalCal(1)">›</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;margin-bottom:6px">
+      <span style="font-size:10px;color:var(--muted);padding:4px">Dom</span>
+      <span style="font-size:10px;color:var(--muted);padding:4px">Seg</span>
+      <span style="font-size:10px;color:var(--muted);padding:4px">Ter</span>
+      <span style="font-size:10px;color:var(--muted);padding:4px">Qua</span>
+      <span style="font-size:10px;color:var(--muted);padding:4px">Qui</span>
+      <span style="font-size:10px;color:var(--muted);padding:4px">Sex</span>
+      <span style="font-size:10px;color:var(--muted);padding:4px">Sáb</span>
+    </div>
+    <div id="mdCalDays" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:12px"></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6">
+      <span style="color:#2ecc71">●</span> Vistado &nbsp;
+      <span style="color:var(--gold)">●</span> Finalizado &nbsp;
+      <span style="color:#3498db">●</span> Rascunho &nbsp;
+      <span style="border:1px solid var(--gold);padding:0 4px;border-radius:3px;font-size:10px">Hoje</span>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL FINALIZAR -->
 <div class="mov" id="MF">
   <div class="modal">
@@ -606,21 +635,61 @@ function svcPeriod(d){
   return f(s)+' → '+f(e);
 }
 function navD(n){curDate.setDate(curDate.getDate()+n);loadDay();}
-function goToday(){curDate=new Date();loadDay();}
+function goToday(){abrirModalData();}
 
 // ═══ INIT ═══
 function initApp(){
-  loadDay();
   loadHist();
   setPerms();
-  // Abre calendário automaticamente para escolher a data do serviço
-  setTimeout(()=>{
-    calViewDate = new Date(curDate);
-    renderCalDays();
-    const p = g('calPop');
-    if(p) p.style.display = 'block';
-    toast('📅 Selecione a data do serviço no calendário','warn');
-  }, 600);
+  // Sempre abre modal de seleção de data ao entrar
+  abrirModalData();
+}
+
+function abrirModalData(){
+  g('modalData').classList.add('open');
+  g('mdCalViewDate') && (calViewDate = new Date());
+  renderModalCal();
+}
+
+function renderModalCal(){
+  const m=calViewDate.getMonth(), y=calViewDate.getFullYear();
+  const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const el=g('mdCalMes');if(el)el.textContent=meses[m]+' '+y;
+  const el2=g('mdCalDays');if(!el2)return;
+  const first=new Date(y,m,1).getDay();
+  const dias=new Date(y,m+1,0).getDate();
+  const hoje=dk(new Date());
+  const sel=dk(curDate);
+  let html='';
+  for(let i=0;i<first;i++) html+='<button class="cday empty" disabled></button>';
+  for(let d=1;d<=dias;d++){
+    const key=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const info=calCache[key]||{};
+    let cls='cday';
+    if(key===sel) cls+=' selected';
+    else if(key===hoje) cls+=' today';
+    else if(info.visto) cls+=' has-visto';
+    else if(info.finalizado) cls+=' has-fin';
+    else if(info.rascunho) cls+=' has-draft';
+    // Não permitir datas futuras
+    const dataKey=new Date(y,m,d);
+    const dataHoje=new Date(); dataHoje.setHours(23,59,59,0);
+    if(dataKey>dataHoje){ html+=`<button class="cday empty" disabled style="opacity:.2">${d}</button>`; continue; }
+    html+=`<button class="${cls}" onclick="selecionarDataServico('${key}')">${d}</button>`;
+  }
+  el2.innerHTML=html;
+}
+
+function navModalCal(n){
+  calViewDate.setMonth(calViewDate.getMonth()+n);
+  renderModalCal();
+}
+
+function selecionarDataServico(key){
+  const parts=key.split('-');
+  curDate=new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+  g('modalData').classList.remove('open');
+  loadDay();
 }
 function setPerms(){
   const cap=curUser==='Cap. Jorge Luis';
