@@ -670,7 +670,7 @@ function removerSemOcc(){
 
 // ═══ OCCS ═══
 function addOcc(){
-  occs.push({tipo:'',solicitante:'',endereco:'',referencia:'',hora:'',tResp:'',tAtend:'',descricao:'',cidade:''});
+  occs.push({tipo:'',solicitante:'',endereco:'',referencia:'',hora:'',tResp:'',tAtend:'',sinesp:'',descricao:'',cidade:''});
   renderOccs();updateStats();
 }
 function delOcc(i){occs.splice(i,1);renderOccs();updateStats();}
@@ -741,7 +741,9 @@ function renderOccs(){
           <div class="fg"><label class="fl">Tempo Atendimento</label>
             <input class="fi oi" value="${esc(o.tAtend)}" placeholder="Ex: 45min" ${d} onchange="upOcc(${i},'tAtend',this.value)">
           </div>
-
+          <div class="fg"><label class="fl">Número SINESP CAD <span class="rm">*</span></label>
+            <input class="fi oi" value="${esc(o.sinesp||'')}" placeholder="Ex: 20260408205851-4" maxlength="40" ${d} style="font-family:monospace;letter-spacing:1px" onchange="upOcc(${i},'sinesp',this.value)">
+          </div>
         </div>
         <div class="fr fr1"><div class="fg"><label class="fl">Descrição da Ocorrência <span class="rm">*</span></label>
           <textarea class="ft ot" ${d} onchange="upOcc(${i},'descricao',this.value)">${esc(o.descricao)}</textarea>
@@ -1078,6 +1080,7 @@ function valOccs(){
     if(!o.solicitante){toast(`Ocorrência #${i+1}: Solicitante obrigatório!`,'err');return false;}
     if(!o.endereco){toast(`Ocorrência #${i+1}: Endereço obrigatório!`,'err');return false;}
     if(!o.hora){toast(`Ocorrência #${i+1}: Hora obrigatória!`,'err');return false;}
+    if(!o.sinesp){toast(`Ocorrência #${i+1}: Número SINESP CAD obrigatório!`,'err');return false;}
     if(!o.descricao){toast(`Ocorrência #${i+1}: Descrição obrigatória!`,'err');return false;}
   }
   return true;
