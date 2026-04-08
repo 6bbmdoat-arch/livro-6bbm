@@ -605,8 +605,8 @@ function logout(){
 function dk(d){return d.toISOString().slice(0,10);}
 function fmtD(d){return d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});}
 function svcPeriod(d){
-  const s=new Date(d);s.setHours(7,0,0,0);
-  const e=new Date(d);e.setDate(e.getDate()+1);e.setHours(7,0,0,0);
+  const s=new Date(d);s.setHours(8,0,0,0);
+  const e=new Date(d);e.setDate(e.getDate()+1);e.setHours(8,0,0,0);
   const f=x=>x.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   return f(s)+' → '+f(e);
 }
@@ -614,7 +614,19 @@ function navD(n){curDate.setDate(curDate.getDate()+n);loadDay();}
 function goToday(){curDate=new Date();loadDay();}
 
 // ═══ INIT ═══
-function initApp(){loadDay();loadHist();setPerms();}
+function initApp(){
+  loadDay();
+  loadHist();
+  setPerms();
+  // Abre calendário automaticamente para escolher a data do serviço
+  setTimeout(()=>{
+    calViewDate = new Date(curDate);
+    renderCalDays();
+    const p = g('calPop');
+    if(p) p.style.display = 'block';
+    toast('📅 Selecione a data do serviço no calendário','warn');
+  }, 600);
+}
 function setPerms(){
   const cap=curUser==='Cap. Jorge Luis';
   g('BAO').style.display=cap?'none':'flex';
