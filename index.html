@@ -359,31 +359,6 @@ body{font-family:'Inter',sans-serif;background:var(--darker);color:var(--txt);mi
     </div>
   </div>
 
-  <!-- III SINESP -->
-  <div class="sec">
-    <div class="shdr"><span class="stitle">III — SINESP CAD</span><span class="bdg bo">Opcional</span></div>
-    <div class="sbody">
-      <div class="fr fr2">
-        <div class="fg">
-          <label class="fl">Número SINESP CAD</label>
-          <input class="fi" id="fSI" placeholder="Ex: SINBM2025MA060000000001" maxlength="40" style="font-family:monospace;letter-spacing:1px">
-        </div>
-        <div class="fg">
-          <label class="fl">Município Principal</label>
-          <select class="fs" id="fMU">
-            <option value="">Selecionar...</option>
-            <option>Altamira do Maranhão</option><option>Alto Alegre do Maranhão</option>
-            <option>Bacabal</option><option>Bom Lugar</option><option>Brejo de Areia</option>
-            <option>Conceição do Lago-Açu</option><option>Lago da Pedra</option>
-            <option>Lago Verde</option><option>Lagoa Grande do Maranhão</option>
-            <option>Marajá do Sena</option><option>Olho d'Água das Cunhãs</option>
-            <option>Paulo Ramos</option><option>São Luís Gonzaga do Maranhão</option>
-            <option>São Mateus do Maranhão</option><option>Vitorino Freire</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- AÇÕES -->
   <div class="sec">
@@ -636,7 +611,7 @@ function populateForm(){
   const d=livro||{};
   occs=d.ocorrencias||[];
   sv('fT',d.telefonista||'');sv('fP',d.permuta||'');
-  sv('fSI',d.sinesp||'');sv('fMU',d.municipio||'');
+  // SINESP removido
   renderOccs();updateStats();renderFin();renderVisto();
   // restaurar estado sem intercorrências
   if(livro&&livro.semOcorrencias){
@@ -652,7 +627,7 @@ function populateForm(){
 }
 function sv(id,v){const e=g(id);if(e)e.value=v;}
 function lockForm(l){
-  ['fT','fP','fSI','fMU'].forEach(id=>{const e=g(id);if(e)e.disabled=l;});
+  ['fT','fP'].forEach(id=>{const e=g(id);if(e)e.disabled=l;});
   const isCap=curUser==='Cap. Jorge Luis';
   g('BAO').style.display=(l||isCap)?'none':'flex';
   const bso=g('btnSemOcc');
@@ -766,9 +741,7 @@ function renderOccs(){
           <div class="fg"><label class="fl">Tempo Atendimento</label>
             <input class="fi oi" value="${esc(o.tAtend)}" placeholder="Ex: 45min" ${d} onchange="upOcc(${i},'tAtend',this.value)">
           </div>
-          <div class="fg"><label class="fl">Nº SINESP CAD da Ocorrência</label>
-            <input class="fi oi" value="${esc(o.sinesp||'')}" placeholder="Código SINESP" ${d} style="font-family:monospace" onchange="upOcc(${i},'sinesp',this.value)">
-          </div>
+
         </div>
         <div class="fr fr1"><div class="fg"><label class="fl">Descrição da Ocorrência <span class="rm">*</span></label>
           <textarea class="ft ot" ${d} onchange="upOcc(${i},'descricao',this.value)">${esc(o.descricao)}</textarea>
@@ -822,7 +795,7 @@ async function saveDraft(){
 function mkPay(fin){
   return{
     telefonista:g('fT').value,permuta:g('fP').value,
-    sinesp:g('fSI').value,municipio:g('fMU').value,
+
     ocorrencias:JSON.parse(JSON.stringify(occs)),
     semOcorrencias:livro&&livro.semOcorrencias?true:false,
     rascunho:true,finalizado:fin,
@@ -904,7 +877,7 @@ function renderVisto(){
   const showVisto = curUser==='Cap. Jorge Luis' || d.visto;
   box.style.display = showVisto ? 'block' : 'none';
   if(!showVisto) return;
-  g('VD').value=new Date().toLocaleDateString('pt-BR');
+  g('VD').value=curDate.toLocaleDateString('pt-BR'); // data do serviço, não de hoje
   if(d.visto){
     const ov=g('VO');ov.style.display='block';
     ov.textContent='✅ Visto registrado pelo Cap. Jorge Luis em '+new Date(d.vistoAt).toLocaleString('pt-BR');
