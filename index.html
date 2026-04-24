@@ -698,6 +698,10 @@ async function loadDay(){
   g('SP').textContent=svcPeriod(curDate);
   g('fDS').value=curDate.toLocaleDateString('pt-BR');
   g('AB').innerHTML='';
+  // RESET IMEDIATO antes do await — evita que estado do dia anterior
+  // apareça enquanto o Firebase ainda está carregando
+  livro=null; occs=[];
+  populateForm();
   // Tenta carregar do Firebase; se offline usa localStorage
   try{
     if(!db)throw new Error('no db');
@@ -850,11 +854,14 @@ function renderOccs(){
           </div>
         </div>
         <div class="fr fr1"><div class="fg"><label class="fl">Descrição da Ocorrência <span class="rm">*</span></label>
-          <textarea class="ft ot" ${d} onchange="upOcc(${i},'descricao',this.value)">${esc(o.descricao)}</textarea>
+          <textarea class="ft ot" ${d} oninput="upOcc(${i},'descricao',this.value)">${esc(o.descricao)}</textarea>
         </div></div>
       </div>
     </div>`).join('');
-  g('OB').textContent=occs.length+' registro'+(occs.length!==1?'s':'');
+  if(!(livro&&livro.semOcorrencias)){
+    g('OB').textContent=occs.length+' registro'+(occs.length!==1?'s':'');
+    g('OB').className='bdg bi';
+  }
 }
 function esc(s){return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 
@@ -983,29 +990,37 @@ function renderVisto(){
   const showVisto = curUser==='Cap. Jorge Luis' || d.visto;
   box.style.display = showVisto ? 'block' : 'none';
   if(!showVisto) return;
-  g('VD').value=curDate.toLocaleDateString('pt-BR'); // data do serviço, não de hoje
+  g('VD').value=curDate.toLocaleDateString('pt-BR');
+  // Resetar sempre antes de preencher (evita estado antigo entre dias)
+  const ov=g('VO'); ov.style.display='none'; ov.textContent='';
+  const bv=g('btnVisto'); if(bv) bv.disabled=false;
+  g('VP').value=''; g('VP').disabled=false;
+  const pb=g('pdfBox'); if(pb) pb.style.display='none';
+
   if(d.visto){
-    const ov=g('VO');ov.style.display='block';
+    ov.style.display='block';
     ov.textContent='✅ Visto registrado pelo Cap. Jorge Luis em '+new Date(d.vistoAt).toLocaleString('pt-BR');
     g('VP').disabled=true;
-    const bv=g('btnVisto');if(bv)bv.disabled=true;
-    const pb=g('pdfBox');if(pb)pb.style.display='block';
+    if(bv)bv.disabled=true;
+    if(pb)pb.style.display='block';
   } else {
-    // Só cap pode assinar; outros veem aviso
+    // Só cap pode assinar
     if(curUser!=='Cap. Jorge Luis'){
       g('VP').disabled=true;
-      const bv=g('btnVisto');if(bv)bv.disabled=true;
+      if(bv)bv.disabled=true;
     }
   }
 }
 async function darVisto(){
+  // Proteção extra: não permitir visto em livro que já foi vistado
+  if(livro&&livro.visto){toast('Este livro já foi vistado!','warn');return;}
   if(PINS['Cap. Jorge Luis']!==g('VP').value){toast('PIN incorreto!','err');return;}
+  const bv=g('btnVisto');if(bv){bv.disabled=true;bv.textContent='Aguarde...';}
   const u={visto:true,vistoBy:'Cap. Jorge Luis',vistoAt:new Date().toISOString()};
   try{if(db)await db.collection('livros').doc(dk(curDate)).set(u,{merge:true});}catch(e){}
   livro={...(livro||{}),...u};
   localStorage.setItem('livro_'+dk(curDate), JSON.stringify(livro));
   toast('Visto registrado! 🪖');renderVisto();updateStats();checkAlerts2();
-  const pb2=g('pdfBox');if(pb2)pb2.style.display='block';
   const d2=curDate.toLocaleDateString('pt-BR'),tel=g('fT').value;
   const m=encodeURIComponent(`🪖 *6° BBM — Visto Registrado*\n📅 Serviço: ${d2}\n👮 Telefonista: ${tel}\nVisto pelo Cap. Jorge Luis às ${new Date().toLocaleTimeString('pt-BR')}`);
   sendWA(WA_CAP,WA_KEY_CAP,m);
@@ -1092,13 +1107,10 @@ async function loadHist(){
 }
 
 function abrirDiaDaHist(dateStr){
-  // navega para o dia e abre a aba livro
   const parts=dateStr.split('-');
   curDate=new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
-  openTab('TL', document.querySelector('.tab'));
-  document.querySelectorAll('.tab').forEach(b=>{
-    if(b.textContent.includes('Livro'))b.click();
-  });
+  const tabBtn=Array.from(document.querySelectorAll('.tab')).find(b=>b.textContent.includes('Livro'));
+  if(tabBtn) openTab('TL', tabBtn);
   loadDay();
 }
 
@@ -1139,6 +1151,9 @@ function renderCalDays(){
     else if(info.visto) cls+=' has-visto';
     else if(info.finalizado) cls+=' has-fin';
     else if(info.rascunho) cls+=' has-draft';
+    const dataKey=new Date(y,m,d);
+    const dataHoje=new Date(); dataHoje.setHours(23,59,59,0);
+    if(dataKey>dataHoje){ html+=`<button class="cday empty" disabled style="opacity:.2">${d}</button>`; continue; }
     html+=`<button class="${cls}" onclick="selecionarDia('${key}')">${d}</button>`;
   }
   el2.innerHTML=html;
@@ -1170,8 +1185,7 @@ function bloquearPins(){
   g('pinLock').style.display = 'block';
   g('pinContent').style.display = 'none';
 }
-// Bloquear ao trocar de aba
-const _origOpenTab = openTab;
+// (bloco removido — openTab já trata o bloqueio de pins internamente)
 
 // ═══ VALIDATE ═══
 function valEscala(){if(!g('fT').value){toast('Selecione o Telefonista Escalado!','err');return false;}return true;}
